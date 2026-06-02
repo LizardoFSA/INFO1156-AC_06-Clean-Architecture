@@ -1,12 +1,7 @@
 import { Injectable } from "@nestjs/common"
+import { FeedPost } from "@/posts/domain/post.entity"
 
-export type FeedPost = {
-    createdAt: Date
-    likesCount: number
-    commentsCount: number
-    relevanceScore: number
-}
-
+export type { FeedPost }
 export type FeedMode = "latest" | "mostLiked" | "mostCommented" | "relevance"
 
 interface FeedRankingStrategy {
