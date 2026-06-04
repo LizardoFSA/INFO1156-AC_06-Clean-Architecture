@@ -5,7 +5,7 @@
 | Integrante | Módulo(s) asignado(s) |
 |---|---|
 | _LizardoFSA_ | Posts |
-| _(nombre)_ | Comments |
+| _Benjamin De La Fuente_ | Comments |
 | _(nombre)_ | Likes + Categories |
 | _(nombre)_ | Moderation + Documentación |
 
