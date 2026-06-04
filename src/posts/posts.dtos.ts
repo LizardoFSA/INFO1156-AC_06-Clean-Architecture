@@ -1,6 +1,5 @@
 import {
     IsIn,
-    IsInt,
     IsNotEmpty,
     IsOptional,
     IsString,
@@ -8,7 +7,6 @@ import {
     Length,
     Matches,
     MaxLength,
-    Min,
 } from "class-validator"
 
 const NO_HTML_PATTERN = /^[^<>]*$/
@@ -44,30 +42,6 @@ export class CreatePostDto {
     @IsOptional()
     @IsString({ message: "La categoría debe ser un texto" })
     categoryId?: string
-}
-
-export class CreateCommentDto {
-    @IsString({ message: "El contenido debe ser un texto" })
-    @IsNotEmpty({ message: "El contenido no puede estar vacío" })
-    @Length(2, 400, {
-        message: "El contenido debe tener entre 2 y 400 caracteres",
-    })
-    @Matches(NO_HTML_PATTERN, { message: NO_HTML_MESSAGE })
-    content!: string
-}
-
-export class AddLikeDto {
-    @IsOptional()
-    @IsString({ message: "El tipo de reacción debe ser un texto" })
-    @IsIn(["like", "fire", "clap"], {
-        message: "Tipo de reacción no válida (like, fire, clap)",
-    })
-    reactionType?: string
-
-    @IsOptional()
-    @IsInt({ message: "El peso debe ser un número entero" })
-    @Min(1, { message: "El peso debe ser al menos 1" })
-    weight?: number
 }
 
 export class FeedQueryDto {
