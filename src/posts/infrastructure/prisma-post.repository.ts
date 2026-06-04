@@ -4,7 +4,7 @@ import {
     CreatePostData,
     IPostRepository,
 } from "@/posts/domain/post.repository"
-import { FeedPost, Post } from "@/posts/domain/post.entity"
+import { FeedPostData, Post } from "@/posts/domain/post.entity"
 
 type PrismaPost = {
     id: string
@@ -37,7 +37,7 @@ export class PrismaPostRepository implements IPostRepository {
         return record ? this.toEntity(record) : null
     }
 
-    async findFeedPosts(categoryId?: string): Promise<FeedPost[]> {
+    async findFeedPosts(categoryId?: string): Promise<FeedPostData[]> {
         const posts = await this.prisma.post.findMany({
             where: categoryId ? { categoryId } : undefined,
             include: { comments: true, likes: true, category: true },
@@ -54,7 +54,6 @@ export class PrismaPostRepository implements IPostRepository {
             updatedAt: post.updatedAt,
             likesCount: post.likes.reduce((sum, l) => sum + l.weight, 0),
             commentsCount: post.comments.length,
-            relevanceScore: 0,
         }))
     }
 

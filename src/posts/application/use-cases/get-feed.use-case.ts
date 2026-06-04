@@ -7,9 +7,12 @@ import {
     IPostRepository,
     POST_REPOSITORY,
 } from "@/posts/domain/post.repository"
+import { RelevanceCalculator } from "@/posts/domain/relevance.calculator"
 
 @Injectable()
 export class GetFeedUseCase {
+    private readonly relevanceCalculator = new RelevanceCalculator()
+
     constructor(
         @Inject(POST_REPOSITORY)
         private readonly postRepository: IPostRepository,
@@ -17,7 +20,8 @@ export class GetFeedUseCase {
     ) {}
 
     async execute(mode: FeedMode = "latest", categoryId?: string) {
-        const posts = await this.postRepository.findFeedPosts(categoryId)
+        const rawPosts = await this.postRepository.findFeedPosts(categoryId)
+        const posts = this.relevanceCalculator.scoreAll(rawPosts)
         return this.feedRankingFactory.forMode(mode).rank(posts)
     }
 }
