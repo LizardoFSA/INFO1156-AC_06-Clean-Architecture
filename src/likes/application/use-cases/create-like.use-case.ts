@@ -9,6 +9,7 @@ import {
     ILikeRepository,
     LIKE_REPOSITORY,
 } from "@/likes/domain/like.repository"
+import { Like } from "@/likes/domain/like.entity"
 import { PostsService } from "@/posts/posts.service"
 
 @Injectable()
@@ -19,15 +20,13 @@ export class CreateLikeUseCase {
         private readonly postsService: PostsService,
     ) {}
 
-    async execute(postId: string, data: AddLikeDto) {
+    async execute(postId: string, data: AddLikeDto): Promise<Like> {
         const post = await this.postsService.findById(postId)
-
         if (!post) {
             throw new NotFoundException("Post no encontrado")
         }
 
         const weight = data.weight ?? 1
-
         if (weight < 1) {
             throw new BadRequestException("El peso debe ser al menos 1")
         }

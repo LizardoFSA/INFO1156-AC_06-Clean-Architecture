@@ -1,6 +1,5 @@
 import {
     IsIn,
-    IsInt,
     IsNotEmpty,
     IsOptional,
     IsString,
@@ -8,7 +7,6 @@ import {
     Length,
     Matches,
     MaxLength,
-    Min,
 } from "class-validator"
 
 const NO_HTML_PATTERN = /^[^<>]*$/
@@ -45,8 +43,6 @@ export class CreatePostDto {
     @IsString({ message: "La categoría debe ser un texto" })
     categoryId?: string
 }
-
-
 
 export class FeedQueryDto {
     @IsOptional()
