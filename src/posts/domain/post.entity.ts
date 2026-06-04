@@ -10,7 +10,10 @@ export class Post {
     ) {}
 }
 
-export type FeedPost = {
+// Datos crudos del feed tal como los provee la capa de persistencia.
+// No incluye relevanceScore: ese valor es una regla de negocio que se
+// calcula en el dominio (RelevanceCalculator), no en la infraestructura.
+export type FeedPostData = {
     id: string
     title: string
     description: string
@@ -21,5 +24,9 @@ export type FeedPost = {
     updatedAt: Date
     likesCount: number
     commentsCount: number
+}
+
+// Vista enriquecida del feed: dato crudo + puntuación de relevancia derivada.
+export type FeedPost = FeedPostData & {
     relevanceScore: number
 }
