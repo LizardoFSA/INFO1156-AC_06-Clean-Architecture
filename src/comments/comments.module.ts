@@ -1,12 +1,19 @@
 import { Module } from "@nestjs/common"
 import { CommentsController } from "@/comments/comments.controller"
-import { CommentsService } from "@/comments/comments.service"
 import { ModerationModule } from "@/moderation/moderation.module"
 import { PostsModule } from "@/posts/posts.module"
+import { COMMENT_REPOSITORY } from "@/comments/domain/comment.repository"
+import { PrismaCommentRepository } from "@/comments/infrastructure/prisma-comment.repository"
+import { CreateCommentUseCase } from "@/comments/application/use-cases/create-comment.use-case"
+import { ListCommentsUseCase } from "@/comments/application/use-cases/list-comments.use-case"
 
 @Module({
     imports: [PostsModule, ModerationModule],
     controllers: [CommentsController],
-    providers: [CommentsService],
+    providers: [
+        { provide: COMMENT_REPOSITORY, useClass: PrismaCommentRepository },
+        CreateCommentUseCase,
+        ListCommentsUseCase,
+    ],
 })
 export class CommentsModule {}

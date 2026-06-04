@@ -5,7 +5,7 @@
 | Integrante | Módulo(s) asignado(s) |
 |---|---|
 | _LizardoFSA_ | Posts |
-| _(nombre)_ | Comments |
+| _Benjamin De La Fuente_ | Comments |
 | _(nombre)_ | Likes + Categories |
 | _(nombre)_ | Moderation + Documentación |
 
@@ -253,6 +253,6 @@ export class CreatePostUseCase {
 
 ## Pendiente (resto del equipo)
 
-- **Comments** — entidad `Comment`, `ICommentRepository`, use cases, mover `CreateCommentDto`
+- ~~**Comments** — entidad `Comment`, `ICommentRepository`, use cases, mover `CreateCommentDto`~~ ✅ (Completado por Benjamin De La Fuente)
 - **Likes + Categories** — entidades, repositorios e interfaces, mover `AddLikeDto`
 - **Moderation** — entidad `ProhibitedWord`, `IProhibitedWordRepository`, use cases
