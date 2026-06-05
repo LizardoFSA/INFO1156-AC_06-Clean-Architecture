@@ -4,7 +4,7 @@ import {
     Injectable,
     NotFoundException,
 } from "@nestjs/common"
-import { AddLikeDto } from "@/likes/likes.dtos"
+import { CreateLikeCommand } from "@/likes/application/commands/create-like.command"
 import {
     ILikeRepository,
     LIKE_REPOSITORY,
@@ -20,7 +20,7 @@ export class CreateLikeUseCase {
         private readonly postsService: PostsService,
     ) {}
 
-    async execute(postId: string, data: AddLikeDto): Promise<Like> {
+    async execute(postId: string, data: CreateLikeCommand): Promise<Like> {
         const post = await this.postsService.findById(postId)
         if (!post) {
             throw new NotFoundException("Post no encontrado")

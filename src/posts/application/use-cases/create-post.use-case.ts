@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common"
 import { ModerationService } from "@/moderation/moderation.service"
-import { CreatePostDto } from "@/posts/posts.dtos"
+import { CreatePostCommand } from "@/posts/application/commands/create-post.command"
 import {
     IPostRepository,
     POST_REPOSITORY,
@@ -14,7 +14,7 @@ export class CreatePostUseCase {
         private readonly moderationService: ModerationService,
     ) {}
 
-    async execute(data: CreatePostDto) {
+    async execute(data: CreatePostCommand) {
         const text = `${data.title} ${data.description}`
         const moderation = await this.moderationService.moderate(text)
 
