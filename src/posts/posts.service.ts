@@ -4,8 +4,8 @@ import {
     POST_REPOSITORY,
 } from "@/posts/domain/post.repository"
 
-// Puerto de solo lectura expuesto a otros módulos (comments, likes) para
-// verificar la existencia de un post sin acoplarlos al repositorio de posts.
+// Fachada mantenida para compatibilidad con CommentsService y LikesService
+// mientras esos módulos completan su propia refactorización a Clean Architecture
 @Injectable()
 export class PostsService {
     constructor(

@@ -1,13 +1,13 @@
 import { Body, Controller, Param, Post } from "@nestjs/common"
-import { AddLikeUseCase } from "@/likes/application/use-cases/add-like.use-case"
-import { AddLikeDto } from "@/likes/likes.dtos"
+import { LikesService } from "@/likes/likes.service"
+import { AddLikeDto } from "@/posts/posts.dtos"
 
 @Controller("api/posts/:id/likes")
 export class LikesController {
-    constructor(private readonly addLikeUseCase: AddLikeUseCase) {}
+    constructor(private readonly likesService: LikesService) {}
 
     @Post()
     create(@Param("id") postId: string, @Body() body: AddLikeDto) {
-        return this.addLikeUseCase.execute(postId, body)
+        return this.likesService.create(postId, body)
     }
 }
