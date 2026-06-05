@@ -2,12 +2,12 @@
 
 ## Integrantes del grupo
 
-| Integrante | Módulo(s) asignado(s) |
+| Integrante |
 |---|---|
-| _LizardoFSA_ | Posts |
-| _Benjamin De La Fuente_ | Comments |
-| _(nombre)_ | Likes + Categories |
-| _(nombre)_ | Moderation + Documentación |
+| _LizardoFSA_ |
+| _Benjamin De La Fuente_ |
+| _Benjamin Aliaga_ |
+| _Juan Carrera_ | |
 
 ---
 
@@ -251,8 +251,329 @@ export class CreatePostUseCase {
 
 ---
 
-## Pendiente (resto del equipo)
+---
 
-- ~~**Comments** — entidad `Comment`, `ICommentRepository`, use cases, mover `CreateCommentDto`~~ ✅ (Completado por Benjamin De La Fuente)
-- **Likes + Categories** — entidades, repositorios e interfaces, mover `AddLikeDto`
-- **Moderation** — entidad `ProhibitedWord`, `IProhibitedWordRepository`, use cases
+### Módulo `comments`
+
+#### Arquitectura anterior
+
+`CommentsService` dependía directamente de `PrismaService` y de `PostsService`. Los DTOs vivían en `posts.dtos.ts`. No existían entidades ni interfaz de repositorio.
+
+#### Arquitectura nueva
+
+```mermaid
+classDiagram
+    direction TB
+
+    class CommentsController {
+        -CreateCommentUseCase createComment
+        -ListCommentsUseCase listComments
+        +list(postId)
+        +create(postId, body)
+    }
+
+    class CreateCommentUseCase {
+        -ICommentRepository repo
+        -PostsService posts
+        -ModerationService moderation
+        +execute(postId, data) Comment
+    }
+
+    class ListCommentsUseCase {
+        -ICommentRepository repo
+        -PostsService posts
+        +execute(postId) object
+    }
+
+    class ICommentRepository {
+        <<interface>>
+        +create(data) Comment
+        +findByPostId(postId) Comment[]
+    }
+
+    class PrismaCommentRepository {
+        -PrismaService prisma
+        +create(data) Comment
+        +findByPostId(postId) Comment[]
+    }
+
+    class Comment {
+        <<entity>>
+        +id: string
+        +postId: string
+        +content: string
+        +source: string
+        +createdAt: Date
+        +updatedAt: Date
+    }
+
+    CommentsController --> CreateCommentUseCase
+    CommentsController --> ListCommentsUseCase
+    CreateCommentUseCase --> ICommentRepository
+    ListCommentsUseCase --> ICommentRepository
+    PrismaCommentRepository ..|> ICommentRepository
+    ICommentRepository ..> Comment
+```
+
+#### Archivos creados / modificados
+
+| Archivo | Acción | Descripción |
+|---|---|---|
+| `domain/comment.entity.ts` | Creado | Entidad `Comment` pura |
+| `domain/comment.repository.ts` | Creado | Interfaz `ICommentRepository` + token `COMMENT_REPOSITORY` |
+| `infrastructure/prisma-comment.repository.ts` | Creado | Implementación Prisma del repositorio |
+| `application/use-cases/create-comment.use-case.ts` | Creado | Caso de uso: crear comentario con moderación |
+| `application/use-cases/list-comments.use-case.ts` | Creado | Caso de uso: listar comentarios con total |
+| `comments.dtos.ts` | Creado | `CreateCommentDto` movido desde `posts.dtos.ts` |
+| `comments.controller.ts` | Modificado | Inyecta use cases; ya no depende de `CommentsService` |
+| `comments.module.ts` | Modificado | Registra repositorio por token y ambos use cases |
+
+#### Detalle: respuesta enriquecida de `ListCommentsUseCase`
+
+A diferencia del módulo posts, el listado de comentarios devuelve un objeto con el total calculado en la capa de aplicación:
+
+```typescript
+async execute(postId: string) {
+    const comments = await this.commentRepository.findByPostId(postId)
+    return {
+        total_comments: comments.length,
+        comments,
+    }
+}
+```
+
+---
+
+### Módulo `likes`
+
+#### Arquitectura anterior
+
+`LikesService` dependía directamente de `PrismaService` y de `PostsService`. `AddLikeDto` estaba en `posts.dtos.ts`. No existían entidades ni interfaz de repositorio.
+
+#### Arquitectura nueva
+
+```mermaid
+classDiagram
+    direction TB
+
+    class LikesController {
+        -CreateLikeUseCase createLike
+        +create(postId, body)
+    }
+
+    class CreateLikeUseCase {
+        -ILikeRepository repo
+        -PostsService posts
+        +execute(postId, data) Like
+    }
+
+    class ILikeRepository {
+        <<interface>>
+        +create(data) Like
+    }
+
+    class PrismaLikeRepository {
+        -PrismaService prisma
+        +create(data) Like
+    }
+
+    class Like {
+        <<entity>>
+        +id: string
+        +postId: string
+        +reactionType: string
+        +weight: number
+        +source: string
+        +createdAt: Date
+    }
+
+    LikesController --> CreateLikeUseCase
+    CreateLikeUseCase --> ILikeRepository
+    PrismaLikeRepository ..|> ILikeRepository
+    ILikeRepository ..> Like
+```
+
+#### Archivos creados / modificados
+
+| Archivo | Acción | Descripción |
+|---|---|---|
+| `domain/like.entity.ts` | Creado | Entidad `Like` pura |
+| `domain/like.repository.ts` | Creado | Interfaz `ILikeRepository` + token `LIKE_REPOSITORY` |
+| `infrastructure/prisma-like.repository.ts` | Creado | Implementación Prisma del repositorio |
+| `application/use-cases/create-like.use-case.ts` | Creado | Caso de uso: registrar like con validación de peso |
+| `likes.dtos.ts` | Creado | `AddLikeDto` movido desde `posts.dtos.ts` |
+| `likes.controller.ts` | Modificado | Inyecta `CreateLikeUseCase`; ya no depende de `LikesService` |
+| `likes.module.ts` | Modificado | Registra repositorio por token y use case |
+| `likes.service.ts` | Eliminado | Toda la lógica migrada al use case |
+
+---
+
+### Módulo `categories`
+
+#### Arquitectura anterior
+
+No existía módulo de categorías. Las categorías se manejaban como dato auxiliar de los posts directamente desde Prisma.
+
+#### Arquitectura nueva
+
+```mermaid
+classDiagram
+    direction TB
+
+    class CategoriesController {
+        -ListCategoriesUseCase listCategories
+        +findAll()
+    }
+
+    class ListCategoriesUseCase {
+        -ICategoryRepository repo
+        +execute() Category[]
+    }
+
+    class ICategoryRepository {
+        <<interface>>
+        +findAll() Category[]
+    }
+
+    class PrismaCategoryRepository {
+        -PrismaService prisma
+        +findAll() Category[]
+    }
+
+    class Category {
+        <<entity>>
+        +id: string
+        +name: string
+        +slug: string
+    }
+
+    CategoriesController --> ListCategoriesUseCase
+    ListCategoriesUseCase --> ICategoryRepository
+    PrismaCategoryRepository ..|> ICategoryRepository
+    ICategoryRepository ..> Category
+```
+
+#### Archivos creados
+
+| Archivo | Acción | Descripción |
+|---|---|---|
+| `domain/category.entity.ts` | Creado | Entidad `Category` pura |
+| `domain/category.repository.ts` | Creado | Interfaz `ICategoryRepository` + token `CATEGORY_REPOSITORY` |
+| `infrastructure/prisma-category.repository.ts` | Creado | Implementación Prisma del repositorio |
+| `application/use-cases/list-categories.use-case.ts` | Creado | Caso de uso: listar categorías ordenadas por nombre |
+| `categories.controller.ts` | Creado | Endpoint `GET /api/categories` |
+| `categories.module.ts` | Creado | Módulo completo con token y use case registrados |
+
+---
+
+---
+
+### Módulo `moderation`
+
+#### Arquitectura anterior
+
+`ModerationService` dependía directamente de `PrismaService` para leer palabras prohibidas y para el CRUD del panel admin. No existían entidades de dominio ni interfaz de repositorio.
+
+```typescript
+// ❌ Antes — ModerationService conoce y usa Prisma directamente
+@Injectable()
+export class ModerationService {
+    constructor(private readonly prisma: PrismaService) {}
+
+    async moderate(text: string) {
+        const words = await this.prisma.prohibitedWord.findMany()
+        // ...
+    }
+
+    findAll() { return this.prisma.prohibitedWord.findMany() }
+    create(word, category) { return this.prisma.prohibitedWord.create(...) }
+    delete(id) { return this.prisma.prohibitedWord.delete(...) }
+}
+```
+
+#### Arquitectura nueva
+
+`ModerationService` queda reducido a su responsabilidad de dominio: evaluar texto contra las palabras prohibidas. El CRUD admin se mueve a use cases propios. Ambos dependen de `IProhibitedWordRepository`.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class ModerationController {
+        -ListProhibitedWordsUseCase list
+        -CreateProhibitedWordUseCase create
+        -DeleteProhibitedWordUseCase delete
+        +findAll()
+        +create(body)
+        +delete(id)
+    }
+
+    class ModerationService {
+        -IProhibitedWordRepository repo
+        +moderate(text) ModerationResult
+    }
+
+    class ListProhibitedWordsUseCase {
+        -IProhibitedWordRepository repo
+        +execute() ProhibitedWord[]
+    }
+
+    class CreateProhibitedWordUseCase {
+        -IProhibitedWordRepository repo
+        +execute(data) ProhibitedWord
+    }
+
+    class DeleteProhibitedWordUseCase {
+        -IProhibitedWordRepository repo
+        +execute(id) ProhibitedWord
+    }
+
+    class IProhibitedWordRepository {
+        <<interface>>
+        +findAll() ProhibitedWord[]
+        +create(data) ProhibitedWord
+        +delete(id) ProhibitedWord
+    }
+
+    class PrismaProhibitedWordRepository {
+        -PrismaService prisma
+        +findAll() ProhibitedWord[]
+        +create(data) ProhibitedWord
+        +delete(id) ProhibitedWord
+    }
+
+    class ProhibitedWord {
+        <<entity>>
+        +id: string
+        +word: string
+        +category: string
+        +createdAt: Date
+    }
+
+    ModerationController --> ListProhibitedWordsUseCase
+    ModerationController --> CreateProhibitedWordUseCase
+    ModerationController --> DeleteProhibitedWordUseCase
+    ModerationService --> IProhibitedWordRepository
+    ListProhibitedWordsUseCase --> IProhibitedWordRepository
+    CreateProhibitedWordUseCase --> IProhibitedWordRepository
+    DeleteProhibitedWordUseCase --> IProhibitedWordRepository
+    PrismaProhibitedWordRepository ..|> IProhibitedWordRepository
+    IProhibitedWordRepository ..> ProhibitedWord
+```
+
+#### Archivos creados / modificados
+
+| Archivo | Acción | Descripción |
+|---|---|---|
+| `domain/prohibited-word.entity.ts` | Creado | Entidad `ProhibitedWord` pura |
+| `domain/prohibited-word.repository.ts` | Creado | Interfaz `IProhibitedWordRepository` + token `PROHIBITED_WORD_REPOSITORY` |
+| `infrastructure/prisma-prohibited-word.repository.ts` | Creado | Implementación Prisma con manejo de `P2025` (not found) |
+| `application/use-cases/list-prohibited-words.use-case.ts` | Creado | Caso de uso: listar palabras prohibidas |
+| `application/use-cases/create-prohibited-word.use-case.ts` | Creado | Caso de uso: agregar palabra prohibida |
+| `application/use-cases/delete-prohibited-word.use-case.ts` | Creado | Caso de uso: eliminar palabra prohibida |
+| `moderation.service.ts` | Modificado | Reducido a solo `moderate()`, inyecta interfaz en lugar de Prisma |
+| `moderation.controller.ts` | Modificado | Inyecta use cases en lugar de `ModerationService` |
+| `moderation.module.ts` | Modificado | Registra repositorio por token, use cases y mantiene export de `ModerationService` |
+
+---
+
