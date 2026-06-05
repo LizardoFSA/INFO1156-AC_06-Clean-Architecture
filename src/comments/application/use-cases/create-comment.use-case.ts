@@ -9,7 +9,7 @@ import {
     ICommentRepository,
 } from "@/comments/domain/comment.repository"
 import { Comment } from "@/comments/domain/comment.entity"
-import { CreateCommentDto } from "@/comments/comments.dtos"
+import { CreateCommentCommand } from "@/comments/application/commands/create-comment.command"
 import { ModerationService } from "@/moderation/moderation.service"
 import { PostsService } from "@/posts/posts.service"
 
@@ -22,7 +22,10 @@ export class CreateCommentUseCase {
         private readonly moderationService: ModerationService,
     ) {}
 
-    async execute(postId: string, data: CreateCommentDto): Promise<Comment> {
+    async execute(
+        postId: string,
+        data: CreateCommentCommand,
+    ): Promise<Comment> {
         const post = await this.postsService.findById(postId)
         if (!post) {
             throw new NotFoundException("Post no encontrado")

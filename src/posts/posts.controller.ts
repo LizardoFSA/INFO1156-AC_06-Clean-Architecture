@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Query } from "@nestjs/common"
+import { CreatePostCommand } from "@/posts/application/commands/create-post.command"
 import { CreatePostDto, FeedQueryDto } from "@/posts/posts.dtos"
 import { CreatePostUseCase } from "@/posts/application/use-cases/create-post.use-case"
 import { GetPostsUseCase } from "@/posts/application/use-cases/get-posts.use-case"
@@ -15,7 +16,13 @@ export class PostsController {
 
     @Post()
     async create(@Body() body: CreatePostDto) {
-        const created = await this.createPostUseCase.execute(body)
+        const command: CreatePostCommand = {
+            title: body.title,
+            description: body.description,
+            imageUrl: body.imageUrl,
+            categoryId: body.categoryId,
+        }
+        const created = await this.createPostUseCase.execute(command)
 
         return {
             ok: true,
