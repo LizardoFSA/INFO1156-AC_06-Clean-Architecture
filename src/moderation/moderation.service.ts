@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
-import { PrismaService } from "@/shared/prisma.service"
+import { Inject, Injectable } from "@nestjs/common"
+import {
+    IProhibitedWordRepository,
+    PROHIBITED_WORD_REPOSITORY,
+} from "@/moderation/domain/prohibited-word.repository"
 
 export type ModerationResult = {
     approved: boolean
@@ -7,17 +10,22 @@ export type ModerationResult = {
     category?: string
 }
 
-const buildFuzzyRegex = (word: string) => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    return new RegExp(escaped.split("").join("[^a-zA-Z0-9]*"), "gi")
+const METACHAR = /[.*+?^${}()|[\]\\]/g
+
+const buildFuzzyRegex = (word: string): RegExp => {
+    const chars = word.split("").map((c) => c.replace(METACHAR, "\\$&"))
+    return new RegExp(chars.join("[^a-zA-Z0-9]*"), "gi")
 }
 
 @Injectable()
 export class ModerationService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        @Inject(PROHIBITED_WORD_REPOSITORY)
+        private readonly repository: IProhibitedWordRepository,
+    ) {}
 
     async moderate(text: string): Promise<ModerationResult> {
-        const words = await this.prisma.prohibitedWord.findMany()
+        const words = await this.repository.findAll()
 
         for (const pw of words) {
             const regex = buildFuzzyRegex(pw.word)
@@ -31,30 +39,5 @@ export class ModerationService {
         }
 
         return { approved: true }
-    }
-
-    findAll() {
-        return this.prisma.prohibitedWord.findMany({
-            orderBy: { createdAt: "desc" },
-        })
-    }
-
-    create(word: string, category: string) {
-        return this.prisma.prohibitedWord.create({ data: { word, category } })
-    }
-
-    async delete(id: string) {
-        try {
-            return await this.prisma.prohibitedWord.delete({ where: { id } })
-        } catch (err: unknown) {
-            if (
-                err instanceof Error &&
-                "code" in err &&
-                (err as { code: string }).code === "P2025"
-            ) {
-                throw new NotFoundException("Palabra prohibida no encontrada")
-            }
-            throw err
-        }
     }
 }
