@@ -3,18 +3,22 @@ import {
     COMMENT_REPOSITORY,
     ICommentRepository,
 } from "@/comments/domain/comment.repository"
-import { PostsService } from "@/posts/posts.service"
+import {
+    POST_LOOKUP_PORT,
+    PostLookupPort,
+} from "@/posts/application/ports/post-lookup.port"
 
 @Injectable()
 export class ListCommentsUseCase {
     constructor(
         @Inject(COMMENT_REPOSITORY)
         private readonly commentRepository: ICommentRepository,
-        private readonly postsService: PostsService,
+        @Inject(POST_LOOKUP_PORT)
+        private readonly postLookup: PostLookupPort,
     ) {}
 
     async execute(postId: string) {
-        const post = await this.postsService.findById(postId)
+        const post = await this.postLookup.findById(postId)
         if (!post) {
             throw new NotFoundException("Post no encontrado")
         }

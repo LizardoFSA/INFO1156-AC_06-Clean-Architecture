@@ -10,18 +10,22 @@ import {
     LIKE_REPOSITORY,
 } from "@/likes/domain/like.repository"
 import { Like } from "@/likes/domain/like.entity"
-import { PostsService } from "@/posts/posts.service"
+import {
+    POST_LOOKUP_PORT,
+    PostLookupPort,
+} from "@/posts/application/ports/post-lookup.port"
 
 @Injectable()
 export class CreateLikeUseCase {
     constructor(
         @Inject(LIKE_REPOSITORY)
         private readonly likeRepository: ILikeRepository,
-        private readonly postsService: PostsService,
+        @Inject(POST_LOOKUP_PORT)
+        private readonly postLookup: PostLookupPort,
     ) {}
 
     async execute(postId: string, data: CreateLikeCommand): Promise<Like> {
-        const post = await this.postsService.findById(postId)
+        const post = await this.postLookup.findById(postId)
         if (!post) {
             throw new NotFoundException("Post no encontrado")
         }

@@ -8,6 +8,7 @@ import { PrismaPostRepository } from "@/posts/infrastructure/prisma-post.reposit
 import { CreatePostUseCase } from "@/posts/application/use-cases/create-post.use-case"
 import { GetPostsUseCase } from "@/posts/application/use-cases/get-posts.use-case"
 import { GetFeedUseCase } from "@/posts/application/use-cases/get-feed.use-case"
+import { POST_LOOKUP_PORT } from "@/posts/application/ports/post-lookup.port"
 
 @Module({
     imports: [ModerationModule],
@@ -15,11 +16,12 @@ import { GetFeedUseCase } from "@/posts/application/use-cases/get-feed.use-case"
     providers: [
         { provide: POST_REPOSITORY, useClass: PrismaPostRepository },
         PostsService,
+        { provide: POST_LOOKUP_PORT, useExisting: PostsService },
         FeedRankingStrategyFactory,
         CreatePostUseCase,
         GetPostsUseCase,
         GetFeedUseCase,
     ],
-    exports: [PostsService],
+    exports: [PostsService, POST_LOOKUP_PORT],
 })
 export class PostsModule {}
