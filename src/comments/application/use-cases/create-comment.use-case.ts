@@ -1,9 +1,4 @@
-import {
-    BadRequestException,
-    Inject,
-    Injectable,
-    NotFoundException,
-} from "@nestjs/common"
+import { BadRequestException, Inject, Injectable } from "@nestjs/common"
 import {
     COMMENT_REPOSITORY,
     ICommentRepository,
@@ -26,10 +21,7 @@ export class CreateCommentUseCase {
         postId: string,
         data: CreateCommentCommand,
     ): Promise<Comment> {
-        const post = await this.postsService.findById(postId)
-        if (!post) {
-            throw new NotFoundException("Post no encontrado")
-        }
+        await this.postsService.findByIdOrFail(postId)
 
         const moderation = await this.moderationService.moderate(data.content)
         if (!moderation.approved) {

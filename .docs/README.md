@@ -192,6 +192,7 @@ classDiagram
     class PostsService {
         -IPostRepository repo
         +findById(id) Post|null
+        +findByIdOrFail(id) Post
     }
 
     PostsController --> CreatePostUseCase
@@ -217,7 +218,7 @@ classDiagram
 | `application/use-cases/get-feed.use-case.ts` | Creado | Caso de uso: obtener feed con ranking |
 | `feed-ranking.strategy.ts` | Modificado | Importa `FeedPost` desde el dominio |
 | `posts.controller.ts` | Modificado | Inyecta use cases en lugar de PostsService |
-| `posts.service.ts` | Modificado | Reducido a fachada con solo `findById` |
+| `posts.service.ts` | Modificado | Reducido a fachada con `findById` y `findByIdOrFail` (lanza `NotFoundException` si el post no existe) |
 | `posts.module.ts` | Modificado | Registra repositorio (por token) y use cases |
 
 #### Fragmento clave: inversión de dependencias
@@ -569,11 +570,78 @@ classDiagram
 | `domain/prohibited-word.repository.ts` | Creado | Interfaz `IProhibitedWordRepository` + token `PROHIBITED_WORD_REPOSITORY` |
 | `infrastructure/prisma-prohibited-word.repository.ts` | Creado | Implementación Prisma con manejo de `P2025` (not found) |
 | `application/use-cases/list-prohibited-words.use-case.ts` | Creado | Caso de uso: listar palabras prohibidas |
-| `application/use-cases/create-prohibited-word.use-case.ts` | Creado | Caso de uso: agregar palabra prohibida |
+| `application/commands/create-prohibited-word.command.ts` | Creado | Interface `CreateProhibitedWordCommand` — desacopla la capa de aplicación del DTO de presentación |
+| `application/use-cases/create-prohibited-word.use-case.ts` | Creado | Caso de uso: agregar palabra prohibida (recibe `CreateProhibitedWordCommand`) |
 | `application/use-cases/delete-prohibited-word.use-case.ts` | Creado | Caso de uso: eliminar palabra prohibida |
 | `moderation.service.ts` | Modificado | Reducido a solo `moderate()`, inyecta interfaz en lugar de Prisma |
-| `moderation.controller.ts` | Modificado | Inyecta use cases en lugar de `ModerationService` |
+| `moderation.controller.ts` | Modificado | Mapea `CreateProhibitedWordDto` → `CreateProhibitedWordCommand` antes de llamar al use case |
 | `moderation.module.ts` | Modificado | Registra repositorio por token, use cases y mantiene export de `ModerationService` |
+
+---
+
+---
+
+## Correcciones aplicadas (code review)
+
+Tras una revisión de código posterior a la refactorización se identificaron y corrigieron los siguientes problemas:
+
+### 1. Bug en `buildFuzzyRegex` — escape incorrecto de metacaracteres
+
+**Problema:** La función escapaba los metacaracteres regex del word **antes** de hacer `split("")`. Esto partía las secuencias de escape de dos caracteres (`\.`, `\+`, etc.) e insertaba `[^a-zA-Z0-9]*` entre la barra y el carácter escapado, produciendo una regex inválida o que no coincidía con la palabra original.
+
+```typescript
+// ❌ Antes — split parte la secuencia de escape "\."
+const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")  // "." → "\."
+return new RegExp(escaped.split("").join("[^a-zA-Z0-9]*"), "gi")
+// resultado: "\\[^a-zA-Z0-9]*."  ← incorrecto
+```
+
+```typescript
+// ✅ Después — se escapa cada carácter individualmente después del split
+const METACHAR = /[.*+?^${}()|[\]\\]/g
+const chars = word.split("").map((c) => c.replace(METACHAR, "\\$&"))
+return new RegExp(chars.join("[^a-zA-Z0-9]*"), "gi")
+// resultado: "\\.[^a-zA-Z0-9]*"  (para ".") ← correcto
+```
+
+**Impacto:** Palabras prohibidas con metacaracteres (`c++`, `c#`, `f.`, etc.) no se detectaban correctamente, permitiendo contenido que debería bloquearse.
+
+---
+
+### 2. Migraciones con `INTEGER AUTOINCREMENT` en lugar de `TEXT` UUID
+
+**Problema:** Las cuatro migraciones históricas creaban columnas `id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT`, pero `schema.prisma` define todos los modelos con `id String @id @default(uuid())`. Al correr `pnpm prisma migrate deploy` (comando usado en Docker y CI) se creaban tablas con IDs enteros, y el cliente Prisma intentaba insertar UUIDs, generando un error `SQLITE_MISMATCH: datatype mismatch` en cada inserción.
+
+**Solución:** Se eliminaron las cuatro migraciones antiguas y se crearon dos nuevas:
+
+| Migración | Descripción |
+|---|---|
+| `20260605000000_init` | Crea todas las tablas con `id TEXT NOT NULL PRIMARY KEY` (UUID correcto) |
+| `20260605000001_seed_categories` | Inserta las 8 categorías base con UUIDs generados por SQLite |
+
+`pnpm prisma migrate deploy` ahora crea correctamente una base de datos funcional desde cero.
+
+---
+
+### 3. Guard de post duplicado — `PostsService.findByIdOrFail()`
+
+**Problema:** El patrón de verificar existencia de post antes de crear un comentario o like estaba copiado literalmente en tres use cases:
+
+```typescript
+// Duplicado en CreateCommentUseCase, ListCommentsUseCase y CreateLikeUseCase
+const post = await this.postsService.findById(postId)
+if (!post) throw new NotFoundException("Post no encontrado")
+```
+
+**Solución:** Se agregó `findByIdOrFail(id)` a `PostsService`. Los tres use cases ahora llaman `await this.postsService.findByIdOrFail(postId)` con un único punto de cambio para el mensaje de error y el tipo de excepción.
+
+---
+
+### 4. `CreateProhibitedWordUseCase` dependía del DTO de presentación
+
+**Problema:** El use case recibía `CreateProhibitedWordDto` (clase con decoradores `class-validator`) como parámetro de `execute()`, acoplando la capa de aplicación a la capa de presentación. Inconsistente con `CreateCommentUseCase` y `CreateLikeUseCase` que ya usaban interfaces de Command propias (commit `dcba91d`).
+
+**Solución:** Se creó `CreateProhibitedWordCommand` y se actualizó el use case para recibirlo. El controller mapea `CreateProhibitedWordDto` → `CreateProhibitedWordCommand` antes de llamar al use case, igual que el resto de los módulos.
 
 ---
 

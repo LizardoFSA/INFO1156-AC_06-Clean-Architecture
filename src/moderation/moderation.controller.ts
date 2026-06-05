@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common"
 import { CreateProhibitedWordDto } from "@/moderation/moderation.dtos"
+import { CreateProhibitedWordCommand } from "@/moderation/application/commands/create-prohibited-word.command"
 import { ListProhibitedWordsUseCase } from "@/moderation/application/use-cases/list-prohibited-words.use-case"
 import { CreateProhibitedWordUseCase } from "@/moderation/application/use-cases/create-prohibited-word.use-case"
 import { DeleteProhibitedWordUseCase } from "@/moderation/application/use-cases/delete-prohibited-word.use-case"
@@ -19,7 +20,11 @@ export class ModerationController {
 
     @Post()
     create(@Body() body: CreateProhibitedWordDto) {
-        return this.createProhibitedWordUseCase.execute(body)
+        const command: CreateProhibitedWordCommand = {
+            word: body.word,
+            category: body.category,
+        }
+        return this.createProhibitedWordUseCase.execute(command)
     }
 
     @Delete(":id")

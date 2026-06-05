@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common"
 import {
     COMMENT_REPOSITORY,
     ICommentRepository,
@@ -14,10 +14,7 @@ export class ListCommentsUseCase {
     ) {}
 
     async execute(postId: string) {
-        const post = await this.postsService.findById(postId)
-        if (!post) {
-            throw new NotFoundException("Post no encontrado")
-        }
+        await this.postsService.findByIdOrFail(postId)
 
         const comments = await this.commentRepository.findByPostId(postId)
 

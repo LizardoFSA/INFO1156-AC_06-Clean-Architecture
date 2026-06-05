@@ -10,9 +10,11 @@ export type ModerationResult = {
     category?: string
 }
 
-const buildFuzzyRegex = (word: string) => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    return new RegExp(escaped.split("").join("[^a-zA-Z0-9]*"), "gi")
+const METACHAR = /[.*+?^${}()|[\]\\]/g
+
+const buildFuzzyRegex = (word: string): RegExp => {
+    const chars = word.split("").map((c) => c.replace(METACHAR, "\\$&"))
+    return new RegExp(chars.join("[^a-zA-Z0-9]*"), "gi")
 }
 
 @Injectable()
